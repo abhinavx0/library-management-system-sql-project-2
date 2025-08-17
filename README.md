@@ -87,6 +87,251 @@ FOREIGN KEY (branch_id) REFERENCES Branch(branch_id);
 ALTER TABLE return_status ADD CONSTRAINT fk_issued_status
 FOREIGN KEY (issued_id) REFERENCES issued_status(issued_id);
 ```
+
+2. CRUD Operations
+Task 1: Insert a New Book
+```sql
+INSERT INTO books (isbn, book_title, category, rental_price, status, author, publisher)
+VALUES ('978-1-60129-456-2', 'To Kill a Mockingbird', 'Classic', 6.00, 'yes', 'Harper Lee', 'J.B. Lippincott & Co.');
+```
+Task 2: Update a Member’s Address
+```sql
+UPDATE members
+SET member_address = '125 Main St'
+WHERE member_id = 'C101';
+```
+Task 3: Delete an Issued Record
+```sql
+DELETE FROM Library_project.issued_status
+WHERE issued_id = 'IS107';
+```
+Task 4: Retrieve Books Issued by a Specific Employee
+```sql
+SELECT * FROM Library_project.issued_status
+WHERE issued_emp_id = 'E101';
+```
+Task 5: Find Members Who Issued More Than One Book
+```sql
+SELECT issued_member_id,
+       COUNT(issued_member_id) AS No_of_book_issued
+FROM Library_project.issued_status
+GROUP BY issued_member_id
+HAVING COUNT(issued_member_id) > 1;  -- HAVING filters after aggregation
+```
+3. CTAS (Create Table As Select)
+Task 6: Create a Book Issue Count Table
+```sql
+CREATE TABLE book_cnt AS
+SELECT b.isbn, b.book_title,
+       COUNT(iss.issued_id) AS no_issued
+FROM books AS b
+LEFT JOIN issued_status AS iss
+ON b.isbn = iss.issued_book_isbn   -- LEFT JOIN keeps books with zero issues
+GROUP BY b.isbn, b.book_title;
+```
+Task 11: Expensive Books Table
+```sql
+CREATE TABLE expensive_table AS
+SELECT * FROM books
+WHERE rental_price >= 5;
+```
+4. Data Analysis & Queries
+Task 7: Books in a Specific Category
+```sql
+SELECT * FROM books
+WHERE category = 'Children';
+```
+Task 8: Total Rental Income by Category
+```sql
+SELECT b.category,
+       SUM(b.rental_price) AS total_rental_income
+FROM books AS b
+LEFT JOIN issued_status AS iss
+ON b.isbn = iss.issued_book_isbn
+GROUP BY b.category;
+```
+Task 9: Members Registered in the Last 180 Days
+```sql
+SELECT * FROM members
+WHERE reg_date BETWEEN '2024-01-01' AND '2024-12-31';
+-- NOTE: Replace with CURRENT_DATE - INTERVAL for dynamic reporting
+```
+Task 10: Employees with Branch Manager Info
+```sql
+SELECT e1.emp_id, e1.emp_name AS employee_name,
+       e1.position, e1.salary,
+       b.branch_id, b.manager_id,
+       e2.emp_name AS manager_name,
+       b.branch_address, b.contact_no
+FROM employees AS e1
+LEFT JOIN branch AS b ON b.branch_id = e1.branch_id
+LEFT JOIN employees AS e2 ON e2.emp_id = b.manager_id;  -- Self join for manager
+```
+Task 12: Books Not Yet Returned
+```sql
+SELECT *
+FROM (
+    SELECT iss.issued_id, iss.issued_member_id,
+           iss.issued_book_name,
+           rs.return_id, rs.return_date
+    FROM issued_status AS iss
+    LEFT JOIN return_status AS rs
+    ON iss.issued_id = rs.issued_id
+) t
+WHERE return_id IS NULL; -- NULL means not returned
+```
+5. Advanced Tasks (13–20)
+Task 13: Identify Members with Overdue Books
+```sql
+SELECT m.member_id, m.member_name,
+       b.book_title, ist.issued_date,
+       rs.return_date,
+       DATEDIFF(CURRENT_DATE(), ist.issued_date) AS days_overdue
+FROM issued_status AS ist
+LEFT JOIN members AS m ON m.member_id = ist.issued_member_id
+LEFT JOIN books AS b ON ist.issued_book_isbn = b.isbn
+LEFT JOIN return_status AS rs ON rs.issued_id = ist.issued_id
+WHERE rs.return_date IS NULL
+  AND DATEDIFF(CURRENT_DATE(), ist.issued_date) > 30
+ORDER BY m.member_id;
+```
+Task 14: Stored Procedure – Update Book Status on Return
+```sql
+DELIMITER $$
+
+CREATE PROCEDURE add_return_records(
+    IN p_return_id VARCHAR(50),
+    IN p_issued_id VARCHAR(50)
+)
+BEGIN
+    DECLARE v_isbn VARCHAR(50);
+
+    -- Insert into return_status
+    INSERT INTO return_status(return_id, issued_id, return_date)
+    VALUES (p_return_id, p_issued_id, CURRENT_DATE());
+
+    -- Fetch ISBN for the returned book
+    SELECT issued_book_isbn INTO v_isbn
+    FROM issued_status WHERE issued_id = p_issued_id;
+
+    -- Update book status back to available
+    UPDATE books SET status = 'yes'
+    WHERE isbn = v_isbn;
+END $$
+
+DELIMITER ;
+```
+Task 15: Branch Performance Report
+```sql
+CREATE TABLE report_branch AS
+SELECT br.branch_id, br.manager_id,
+       COUNT(ist.issued_id) AS total_books_issued,
+       COUNT(rs.return_id) AS total_books_returned,
+       SUM(b.rental_price) AS total_revenue
+FROM issued_status AS ist
+LEFT JOIN employees AS e ON e.emp_id = ist.issued_emp_id
+LEFT JOIN branch AS br ON br.branch_id = e.branch_id
+LEFT JOIN return_status AS rs ON rs.issued_id = ist.issued_id
+LEFT JOIN books AS b ON b.isbn = ist.issued_book_isbn
+GROUP BY br.branch_id, br.manager_id;
+```
+Task 16: Active Members (Last 6 Months)
+```sql
+CREATE TABLE active_members AS
+SELECT * FROM members
+WHERE member_id IN (
+    SELECT DISTINCT m.member_id
+    FROM members AS m
+    JOIN issued_status AS ist
+    ON m.member_id = ist.issued_member_id
+    WHERE issued_date BETWEEN '2024-01-01' AND CURRENT_DATE()
+);
+```
+Task 17: Employees with Most Issues Processed
+```sql
+SELECT e.emp_name,
+       COUNT(ist.issued_emp_id) AS no_of_books_issued,
+       e.branch_id
+FROM issued_status AS ist
+LEFT JOIN employees AS e ON e.emp_id = ist.issued_emp_id
+GROUP BY ist.issued_emp_id
+ORDER BY no_of_books_issued DESC
+LIMIT 3;
+```
+Task 19: Stored Procedures for Issuing & Returning Books
+-- Issue Book
+```sql
+DELIMITER $$
+CREATE PROCEDURE issue_book(
+    IN p_issued_id VARCHAR(15),
+    IN p_issued_member_id VARCHAR(10),
+    IN p_issued_book_isbn VARCHAR(50),
+    IN p_issued_emp_id VARCHAR(15)
+)
+BEGIN
+    DECLARE v_status VARCHAR(15);
+    SELECT status INTO v_status FROM books WHERE isbn = p_issued_book_isbn;
+
+    IF v_status = 'yes' THEN
+        INSERT INTO issued_status(issued_id, issued_member_id, issued_date, issued_book_isbn, issued_emp_id)
+        VALUES (p_issued_id, p_issued_member_id, CURRENT_DATE(), p_issued_book_isbn, p_issued_emp_id);
+
+        UPDATE books SET status = 'no'
+        WHERE isbn = p_issued_book_isbn;
+    END IF;
+END $$
+DELIMITER ;
+
+-- Return Book
+DELIMITER $$
+CREATE PROCEDURE return_book(
+    IN p_return_id VARCHAR(15),
+    IN p_issued_id VARCHAR(10),
+    IN p_return_book_isbn VARCHAR(50)
+)
+BEGIN
+    DECLARE v_status VARCHAR(15);
+    SELECT status INTO v_status FROM books WHERE isbn = p_return_book_isbn;
+
+    IF v_status = 'no' THEN
+        INSERT INTO return_status(return_id, issued_id, return_date, return_book_isbn)
+        VALUES (p_return_id, p_issued_id, CURRENT_DATE(), p_return_book_isbn);
+
+        UPDATE books SET status = 'yes'
+        WHERE isbn = p_return_book_isbn;
+    END IF;
+END $$
+DELIMITER ;
+```
+Task 20: Overdue Books & Fines (CTAS)
+```sql 
+CREATE TABLE overdue_summary AS
+SELECT iss.issued_member_id AS member_id,
+       COUNT(CASE 
+              WHEN rs.return_id IS NULL 
+                   AND DATEDIFF(CURRENT_DATE, iss.issued_date) > 30 
+              THEN 1 END) AS overdue_books,
+       SUM(CASE 
+              WHEN rs.return_id IS NULL 
+                   AND DATEDIFF(CURRENT_DATE, iss.issued_date) > 30 
+              THEN (DATEDIFF(CURRENT_DATE, iss.issued_date) - 30) * 0.50 
+              ELSE 0 END) AS total_fines,
+       COUNT(iss.issued_id) AS total_books_issued
+FROM issued_status AS iss
+LEFT JOIN return_status AS rs
+ON iss.issued_id = rs.issued_id
+GROUP BY iss.issued_member_id;
+```
+🔑 Key Concepts Covered
+
+CRUD Operations → Insert, Update, Delete, Select
+CTAS → Create summary tables from queries
+JOINs → INNER, LEFT JOIN for combining data
+Aggregation → COUNT, SUM, HAVING
+Stored Procedures → For issuing and returning books
+Business Logic → Overdue fine calculation, performance reports
+
+🚀 This project demonstrates how SQL can be used to model, manage, and analyze a Library Management System with real-world business logic.
 ---
 ## 🛡️ License
 
