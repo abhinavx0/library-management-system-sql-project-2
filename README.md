@@ -322,14 +322,15 @@ LEFT JOIN return_status AS rs
 ON iss.issued_id = rs.issued_id
 GROUP BY iss.issued_member_id;
 ```
-🔑 Key Concepts Covered
+## 🔑 Key Concepts Covered
 
-CRUD Operations → Insert, Update, Delete, Select
-CTAS → Create summary tables from queries
-JOINs → INNER, LEFT JOIN for combining data
-Aggregation → COUNT, SUM, HAVING
-Stored Procedures → For issuing and returning books
-Business Logic → Overdue fine calculation, performance reports
+- **CRUD Operations** → Insert, Update, Delete, Select  
+- **CTAS** → Create summary tables from queries  
+- **JOINs** → Using INNER JOIN and LEFT JOIN for combining data across tables  
+- **Aggregation** → Applying `COUNT`, `SUM`, and `HAVING` for grouped analysis  
+- **Stored Procedures** → Automating issuing and returning book processes  
+- **Business Logic** → Implementing overdue fine calculation & branch performance reports  
+
 
 🚀 This project demonstrates how SQL can be used to model, manage, and analyze a Library Management System with real-world business logic.
 ---
