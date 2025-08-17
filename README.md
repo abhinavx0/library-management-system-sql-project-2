@@ -1,7 +1,31 @@
-# 📚 Library Management System – SQL Project
+# 📚 Library Management System using SQL 
 
-This project is a **Library Management System** built using SQL.  
-It demonstrates the use of **DDL (Data Definition Language), DML (Data Manipulation Language), CRUD operations, CTAS (Create Table As Select), Stored Procedures, and Analytical Queries**.  
+## 🔎 Project Overview
+
+**Title:** Library Management System  
+
+This project is a hands-on implementation of a **Library Management System** using SQL.  
+It covers **database design, table creation, CRUD operations, CTAS, and advanced SQL queries** to manage and analyze library data efficiently. The project highlights practical database management and query-writing skills.  
+
+
+---
+
+## 🎯 Objectives
+
+1. **Database Setup** – Create and populate tables for branches, employees, members, books, issued records, and returns.  
+2. **CRUD Operations** – Perform **Create, Read, Update, Delete** actions on the database.  
+3. **CTAS (Create Table As Select)** – Build new tables from existing query results.  
+4. **Advanced Queries** – Write optimized SQL queries for analysis and reporting.  
+
+---
+
+## 🗂 Project Structure
+
+- **Database Creation** – Setup of `library_project`.  
+- **Table Design** – Branches, Employees, Members, Books, Issued Status, Return Status.  
+- **Relationships** – Primary keys and foreign keys for data integrity.  
+- **CRUD & CTAS** – Operations to manipulate and transform data.  
+- **Queries** – Advanced queries to generate insights.  
 
 ---
 
