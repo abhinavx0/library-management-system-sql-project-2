@@ -7,6 +7,7 @@
 This project is a hands-on implementation of a **Library Management System** using SQL.  
 It covers **database design, table creation, CRUD operations, CTAS, and advanced SQL queries** to manage and analyze library data efficiently. The project highlights practical database management and query-writing skills.  
 
+<img width="690" height="261" alt="Image" src="https://github.com/user-attachments/assets/f5aba886-e209-4158-8a84-41029174808a" />
 
 ---
 
